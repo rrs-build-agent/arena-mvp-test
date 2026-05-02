@@ -207,7 +207,67 @@ Connect rate on aggregator leads ≥30% improvement over baseline within 30 days
 
 `[YYYY-MM-DD] — <Decision> — <Reason> — <Impact on architecture/cost/timeline>`
 
----\n\n[2026-05-02] — Maximus system check completed — Verified read/write loop on context file — MVP infrastructure live\n
+---\n\n[2026-05-02] — Maximus system check completed — Verified read/write loop on context file — MVP infrastructure live\n\n\n---
+
+## 6. PROJECT OUTLINE — ARCHITECTURE SPEC FOR LAURA
+
+> Purpose: Working project plan for producing the architecture spec for the RRS Inbound Lead Follow-Up Cadence. Output of this plan = handoff document for Laura (tech lead). Not a build.
+> Driver: Maximus
+> Status: Active — pre-spec planning phase
+
+### 6.1 Deliverable definition
+
+Done = a single architecture document Laura can read once and start building from with no follow-up questions to Brett.
+
+Format: one markdown doc with three embedded Mermaid diagrams (system data flow, cadence state machine, kill-switch event flow). No Loom, no Figma, no Notion. Markdown in repo is the spec.
+
+Acceptance criteria — Laura can answer all of these from the doc alone:
+1. What Salesforce object, fields, and field types do I create?
+2. What n8n workflows do I build, in what order, with what triggers and error handling?
+3. What webhooks do I configure between Heymarket / Aircall and n8n, and what payloads?
+4. What is the pre-step guard logic before every outbound touch?
+5. What does the kill switch do, and how does it handle race conditions with in-flight Aircall dials?
+6. What is the opt-out detection logic — keyword list + Claude classifier prompt?
+7. What gets logged where, and how are MVP success metrics instrumented?
+8. What is explicitly Phase 2 and should not be built now?
+9. What forward-compat hooks exist for Unsold Estimate Rehash?
+10. Where do I push work and how is it tested before going live?
+
+### 6.2 Workstream breakdown
+
+WS-1: Salesforce Data Model — Define every custom field, picklist, validation rule on the Lead object. Foundation for everything. No dependencies. 1 session.
+
+WS-2: Cadence State Machine — Formalize lifecycle: every state, every transition, every trigger. Outputs Mermaid diagram + transition table. Depends on WS-1. 1 session.
+
+WS-3: Channel Integration Spec — n8n ↔ Heymarket / Aircall / Gmail at API + webhook level. Outbound shape, inbound payload, retry logic, rate limits. Depends on WS-1. 2 sessions (SMS+Voice, then Email).
+
+WS-4: Kill Switch & Opt-Out Architecture — First-class compliance workstream. Centralized halt logic, opt-out detection (keyword + Claude classifier), latency target, race-condition handling. Depends on WS-1, WS-3. 1 session.
+
+WS-5: Cadence Execution Workflows (n8n) — The actual cadence workflows: lead intake, step scheduler, channel dispatcher, inbound listener. Integration choke point. Depends on WS-1 through WS-4. 2 sessions.
+
+WS-6: Compliance & Consent Layer — TCPA / 10DLC posture. Web form consent, opt-in audit, DNC sync. Parallel-safe with WS-2/3. Depends on WS-1. 1 session.
+
+WS-7: Instrumentation & Reporting — How the system measures itself. Required to validate the ≥30% MVP success metric. Depends on WS-1, WS-5. 1 session.
+
+WS-8: Phasing & Forward-Compat Notes — MVP vs Phase 2 fencing, Unsold Estimate Rehash hooks. Synthesis workstream — last. Depends on all others. 0.5 session.
+
+Total estimated effort: 6–8 sessions to Laura handoff.
+
+### 6.3 Dependency map
+
+WS-1 (Salesforce Data Model)
+   ├─→ WS-2 (State Machine) ─┐
+   ├─→ WS-3 (Channel Integ) ─┤
+   ├─→ WS-6 (Compliance)     ├─→ WS-5 (Execution Workflows) ─→ WS-7 (Instrumentation) ─→ WS-8 (Phasing) ─→ DONE
+   └─→ WS-4 (Kill Switch) ───┘
+
+Blockers: WS-1 blocks everything. WS-5 blocked until WS-1–4 lock.
+Parallel-safe: WS-2, WS-3, WS-4, WS-6 can run simultaneously after WS-1.
+Critical-path unblockers — make these two decisions first:
+1. Final Salesforce field schema (WS-1) — every workstream reads from this.
+2. Kill-switch latency target + race-condition policy (WS-4) — drives every outbound workflow design.
+
+### 6.4 Open questions / unknowns\n
 ## SYSTEM_INSTRUCTION :: MAXIMUS
 
 You are **Maximus**, the AI Orchestrator for Brett Thompson's Arena Company / Roof Repair Specialists projects. You run inside n8n. You are powered by Claude. This file — `RRS_CADENCE_CONTEXT.md` — is your **single source of truth and state**. You have write access to it.
