@@ -1,0 +1,153 @@
+# RRS_CADENCE_CONTEXT.md
+
+> **Purpose:** Portable context file for the Roof Repair Specialists Lead Follow-Up Cadence redesign. Load this into any n8n orchestrator, Claude session, or AI agent to restore full project state without re-briefing.
+> **Last updated:** 2026-05-02
+> **Owner:** Brett Thompson
+
+---
+
+## 1. OPERATOR PROFILE
+
+- **Name:** Brett Thompson
+- **Role:** Founder / CEO, Arena Company (permanent-capital holdco) + Roof Repair Specialists (operating co)
+- **Tenure:** 17+ years in roofing
+- **Geography:** North Carolina (Raleigh + Charlotte markets)
+- **Family:** Father of four
+- **Worldview:** Faith-driven leader; faith informs how decisions land, especially leadership/personnel
+- **Long-term thesis:** Building a permanent-capital holding company in needs-based home services
+- **Operating mode:** Mobile-first, often between job sites — assume short windows, low patience for fluff
+
+### Communication contract (how to talk to Brett)
+- **Lead with the decision or next step**, then context. Never bury the lede.
+- **Direct, COO-style.** No AI fluff, no sycophancy, no "great question," no over-summarizing what he just said.
+- **Flag risks, dependencies, second-order effects** unprompted.
+- **Cash-flow aware** — scaling under significant debt service. Cheap + fast > elegant + expensive.
+- **Build systems, not tasks.** If a request is manual, propose the systematization.
+- **Match the pace.** Brett thinks in analogies and pivots fast — track the pivot, don't reset.
+- **Coaching lens on transcripts/data.** Surface patterns and coaching insights, not summaries.
+- **Faith-aware** on leadership and personal decisions — thoughtful, not preachy.
+
+### Domain depth expected
+Roofing ops, home services, Salesforce/FSL, n8n, AI voice + chat agents, recruiting, operator development, SBA lending, small-biz finance, debt restructuring, holdco strategy, marketing-driven lead gen, sales coaching systems.
+
+---
+
+## 2. COMPANY CONTEXT — ROOF REPAIR SPECIALISTS (RRS)
+
+### Business
+- **Model:** Retail roof repair (not insurance/storm chase, not full replacement-only)
+- **Markets:** Raleigh, NC + Charlotte, NC
+- **Revenue:** ~$2M
+- **Blended ticket:** $8,500
+- **In-home close rate:** 45–50%
+- **Implication:** Every inbound lead that runs an appointment is worth ~$3,825 in expected revenue. Connect-rate failure is the single biggest leak.
+
+### Team
+- **5 sales reps** (in-home estimators)
+- **Denise** — EA
+- **1 inside CSR / dispatcher** — handles inbound, books appointments, owns the front of the funnel
+- No dedicated SDR / ISA layer today
+
+### Tech stack (existing — build ON this, don't replace)
+- **CRM:** Salesforce + Field Service Lightning (FSL) — system of record
+- **Automation:** n8n (self-hosted) — orchestration layer
+- **SMS:** Heymarket — shared team inbox, 10DLC-capable
+- **Voice / dialer:** Aircall (auto-dialer already running the current voice cadence)
+- **Email / docs:** Google Workspace
+- **AI:** Claude API (text), AI voice agents (in flight elsewhere)
+- **Finance:** QuickBooks
+
+### Hard constraints
+- **No net-new platforms** unless an existing tool genuinely cannot fill the gap.
+- **Salesforce stays system of record.** Heymarket and Aircall are channels, not databases.
+- **Compliance-first.** 10DLC registered, TCPA-clean opt-in, instant honor of any opt-out signal — not just literal "STOP."
+- **Architecture must be forward-compatible with the Unsold Estimate Rehash project** (next build): shared Heymarket inbox, shared kill-switch logic, shared Salesforce custom objects where reusable.
+
+---
+
+## 3. PROJECT STATE — INBOUND LEAD FOLLOW-UP CADENCE REDESIGN
+
+### One-line frame
+Replace the voice-only inbound cadence with a multi-channel SMS + voice + email cadence, source-aware and persona-aware, with a global kill switch on any reply.
+
+### The problem (quantified)
+- **~80% of inbound leads never connect on first dial.**
+- Current cadence: **22 dials in first 9 days, then 1/day perpetually.** Voice only.
+- **No SMS layer. No email layer. No channel variation. No persona switching.**
+- Voice is the channel consumers avoid; SMS is the channel they prefer (≈98% open / 45% reply).
+- Result: leads that would text back are buried under voicemails, RRS gets marked spam, lost revenue is invisible because these prospects never enter a CRM stage.
+
+### Lead sources in scope (cadence must differ by source)
+- **Third-party aggregator leads** — fastest, most aggressive (shared with competitors, speed-to-lead is everything)
+- **Web form / website inquiries** — fast, but warmer (intent already declared)
+- **Google Local Services Ads (LSA)** — high-intent, often phone-first
+- **Facebook / Meta lead forms** — colder, slower-burn, expect lower intent
+- **Referrals and call-ins** — softer touch, persona = owner/manager early, never aggressive
+
+### Design principles (non-negotiable)
+- **Multi-channel:** SMS + voice + email, each channel doing what it does best.
+- **State-aware kill switch:** ANY reply on ANY channel halts ALL outbound automation immediately. Global, not per-channel.
+- **Persona-aware:** cadence transitions CSR → owner/manager at the right point (later touches, referrals, recovery attempts).
+- **Compliance-first:** 10DLC, TCPA opt-in language on every web form, instant opt-out on any negative-intent signal (not just keyword "STOP").
+- **Source-aware pacing.**
+- **Cash-flow aware build:** MVP first, prove it, then expand.
+
+### Deliverables (the six required outputs)
+1. **Lead source audit** — origin, current connect rate, current handling per source.
+2. **Multi-channel cadence design** — matrix of source × day × channel × persona × message.
+3. **System architecture** — n8n workflows, Heymarket integration, Salesforce data model, Aircall coordination, kill-switch logic.
+4. **Compliance setup** — 10DLC registration plan, web form consent language, opt-out detection (keyword + intent), DNC handling.
+5. **Phased implementation plan** — MVP → full rollout, with success criteria per phase.
+6. **PM handoff document** — buildable by an implementer without Brett in the room.
+
+### Architectural decisions already locked
+- **n8n is the orchestrator.** All cadence state machines live there.
+- **Salesforce is system of record.** Lead object + custom fields for `Cadence_Status__c`, `Cadence_Source__c`, `Last_Channel__c`, `Kill_Switch__c`, `Opt_Out__c`, `Persona_Stage__c` (names indicative, not final).
+- **Heymarket = SMS execution layer + shared inbox.** Inbound replies webhook → n8n → Salesforce update + kill switch.
+- **Aircall = voice execution layer.** Cadence triggers dial tasks; call dispositions write back to Salesforce via existing integration.
+- **Email = Google Workspace via n8n** (SMTP or Gmail API), tracked back to the Lead record.
+- **Kill switch is centralized in n8n**, not duplicated per channel — single source of truth, reused by Unsold Estimate Rehash later.
+- **Custom objects designed for reuse** across cadence projects (inbound follow-up now, unsold rehash next).
+
+### Open questions / decisions still needed
+- Exact day/channel matrix per source (to be designed in deliverable #2).
+- Hand-off trigger from CSR persona → owner/manager persona (proposed: day 4–5 with no engagement, or after 2 ignored SMS).
+- Cold-file definition (proposed: 14 days no engagement on aggregator/web, 21 days on Meta, 30 days on referral).
+- Whether to layer a lightweight AI text agent for first-touch SMS triage, or keep all SMS human-sent from Heymarket in MVP. **Default for MVP: human-sent templates from Heymarket, AI triage in Phase 2.**
+- 10DLC brand/campaign registration timeline — gating factor for SMS go-live.
+
+### Risks / second-order effects to track
+- **10DLC approval lag** can delay SMS launch 2–4 weeks. Start registration on day 1.
+- **Heymarket shared inbox discipline** — if reps reply from personal phones, kill switch breaks. Enforce: all SMS through Heymarket, period.
+- **Aircall + n8n race conditions** — if a dial is queued and a text reply lands mid-cadence, kill switch must beat the dialer. Solve with n8n-side queue check before each Aircall trigger, not after.
+- **CSR capacity** — multi-channel doubles inbound reply volume into Heymarket. CSR may need a response SLA and/or AI-assisted draft replies sooner than Phase 2.
+- **Source attribution drift** — if Salesforce `Lead_Source__c` is dirty, source-aware cadence routes wrong. Audit lead source data integrity as part of deliverable #1.
+- **TCPA exposure on referrals/call-ins** — these often lack documented consent. Cadence for referrals should rely on call + email, with SMS only after explicit opt-in.
+- **Forward-compat with Unsold Estimate Rehash** — any custom object or kill-switch logic built here must be namespaced for reuse, not hardcoded to "inbound."
+
+### MVP definition (Phase 1 target)
+- One source live end-to-end: **aggregator leads** (highest volume, highest pain).
+- SMS + voice only (email Phase 2).
+- Single persona (CSR) for MVP; persona switching Phase 2.
+- Kill switch fully functional across SMS + voice.
+- 10DLC registered and approved.
+- Salesforce custom fields deployed and writing correctly.
+- Success metric: connect rate on aggregator leads improves from current baseline (TBD in audit) by ≥30% within 30 days of go-live.
+
+### Phase 2+
+- Add web form, LSA, Meta, referral cadences.
+- Add email channel.
+- Add persona switching (CSR → owner/manager).
+- Add AI-assisted SMS drafting in Heymarket for CSR.
+- Bridge to Unsold Estimate Rehash project on shared infrastructure.
+
+---
+
+## 4. WORKING AGREEMENTS FOR ANY AI/AGENT LOADING THIS FILE
+
+- Treat Salesforce as truth. n8n is the brain. Heymarket/Aircall/Gmail are hands.
+- Never propose a new SaaS without justifying why the existing stack can't carry it.
+- Never propose a cadence step without specifying: source, day offset, channel, persona, message intent, exit condition.
+- Always state compliance impact when touching SMS.
+- Always specify how the kill switch is honored at every new step.
+- When in doubt, ship the cheaper, faster version and instrument it.
