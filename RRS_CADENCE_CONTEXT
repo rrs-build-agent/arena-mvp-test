@@ -140,8 +140,12 @@ Replace the voice-only inbound cadence with a multi-channel SMS + voice + email 
 - **TCPA exposure on referrals/call-ins.** Often lack documented consent. Mitigation: voice + email only until explicit opt-in.
 - **Forward-compat.** All custom objects/logic must be reusable for Unsold Estimate Rehash.
 
----
-
+---\n\n### Open decisions still to make
+- Exact day/channel matrix per source (deliverable #2 — `CADENCE_MATRIX.md`).
+- CSR → owner/manager handoff trigger. **Working assumption:** day 3 with no engagement, or after 2 ignored SMS.
+- Cold-file thresholds. **Working assumption:** 14 days no engagement (aggregator/web), 21 days (Meta), 30 days (referral).
+- AI text agent for first-touch SMS triage. **MVP decision:** human-sent Heymarket templates only. AI triage = Phase 2.
+- 10DLC approval timeline (gating factor for SMS go-live).\n
 ## 4. LOGIC & INTERVALS
 
 ### MVP scope (Phase 1)
