@@ -20,3 +20,5 @@
 [2026-05-02] — Maximus rebuilt clean from 13-node spec — 27-node Copilot version was non-functional; three-file architecture (Context / Project / Log) live with debounce buffer for Telegram chunking — Executor loop verified, ready for Session 1 prep
 
 [2026-05-02] — Maximus 13-node rebuild verified end-to-end — Three-file architecture (Context / Project / Log) live, debounce buffer functional, write path proven — Ready for Session 1 (commit: pending)
+
+[2026-05-03] — Workstream sub-tasks expanded from prior brainstorming session — Recovered missing detail on WS-1 (data integrity audit, FSL check), WS-3 (Heymarket/Aircall inventories), WS-4 (pre-step guard pseudocode, classifier prompt), WS-6 (consent line, DNC sync), WS-7 (weekly metrics list, Slack destination) — Tightens scope of each session; kill-switch latency target of <60s now explicit; Slack #cadence-metrics proposed as reporting home (commit: pending)
