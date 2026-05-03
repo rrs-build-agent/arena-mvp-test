@@ -2,7 +2,7 @@
 
 > **Project:** Roof Repair Specialists — Inbound Lead Follow-Up Cadence
 > **Status:** Pre-Session 1 — gated on Salesforce baseline data pull
-> **Last updated:** 2026-05-02
+> **Last updated:** 2026-05-03
 
 ---
 
@@ -143,47 +143,25 @@ Connect rate on aggregator leads ≥30% improvement over baseline within 30 days
 ### 7.2 Workstream breakdown
 
 - **WS-1: Salesforce Data Model** — Define every custom field, picklist, validation rule on the Lead object. Foundation. No dependencies. 1 session.
+  - Sub: Audit `Lead_Source__c` data integrity (% of leads correctly source-tagged).
+  - Sub: Confirm current FSL configuration does not touch Lead object pre-conversion in a way that breaks cadence triggers.
 - **WS-2: Cadence State Machine** — Lifecycle, transitions, triggers. Mermaid diagram + transition table. Depends on WS-1. 1 session.
 - **WS-3: Channel Integration Spec** — n8n ↔ Heymarket / Aircall / Gmail at API + webhook level. Depends on WS-1. 2 sessions.
+  - Sub (Heymarket): inventory current sender numbers, API tier, webhook config.
+  - Sub (Aircall): full disposition list, Salesforce write-back audit, in-flight cancellation API capability test.
 - **WS-4: Kill Switch & Opt-Out Architecture** — Centralized halt logic, opt-out detection, latency target, race-condition handling. Depends on WS-1, WS-3. 1 session.
+  - Sub: Pre-step guard pseudocode as explicit deliverable — 5-step check (`Kill_Switch__c`, `Opt_Out__c`, `Cadence_Status__c`, time window, DNC list).
+  - Sub: Claude classifier prompt for soft opt-out — keyword list (STOP, UNSUBSCRIBE, QUIT, END, CANCEL) plus soft-intent classifier.
 - **WS-5: Cadence Execution Workflows (n8n)** — Lead intake, step scheduler, channel dispatcher, inbound listener. Depends on WS-1 through WS-4. 2 sessions.
-- **WS-6: Compliance & Consent Layer** — TCPA / 10DLC posture. Web form consent, opt-in audit, DNC sync. Depends on WS-1. 1 session.
+- **WS-6: Compliance & Consent Layer** — TCPA / 10DLC posture. Depends on WS-1. 1 session.
+  - Sub: Web form consent line — working draft exists, needs final approval.
+  - Sub: DNC list management in Salesforce, checked at lead creation.
 - **WS-7: Instrumentation & Reporting** — How the system measures itself. Depends on WS-1, WS-5. 1 session.
+  - Sub: Weekly metrics — leads entered, connect rate, channel-of-first-engagement, avg touches to engagement, opt-out rate (hard + soft), appointments booked, cold-file rate, kill-switch latency (target <60s).
+  - Sub: Reporting destination — proposed Slack channel `#cadence-metrics`.
 - **WS-8: Phasing & Forward-Compat Notes** — MVP vs Phase 2, Unsold Estimate Rehash hooks. Synthesis. Last. 0.5 session.
 
 **Total: 6–8 sessions to Laura handoff.**
-
-### 7.3 Dependency map
-
-```
-WS-1 (Salesforce Data Model)
-   ├─→ WS-2 (State Machine) ─┐
-   ├─→ WS-3 (Channel Integ) ─┤
-   ├─→ WS-6 (Compliance)     ├─→ WS-5 (Execution Workflows) ─→ WS-7 (Instrumentation) ─→ WS-8 (Phasing) ─→ DONE
-   └─→ WS-4 (Kill Switch) ───┘
-```
-
-**Critical-path unblockers — make these two decisions first:**
-1. Final Salesforce field schema (WS-1) — every workstream reads from this.
-2. Kill-switch latency target + race-condition policy (WS-4) — drives every outbound workflow design.
-
-### 7.4 Working cadence
-- **Session length:** 45 min, hard stop.
-- **Frequency:** 2–3/week.
-- **Format:** 5 min Maximus presents prepared output + decisions needed. 30 min Brett decisions + pivots. 10 min Maximus commits + queues next session.
-
-### 7.5 Kickoff decision — gates Session 1
-Before WS-1 can produce a final field schema, Brett must deliver:
-1. Current Salesforce Lead schema (full field list).
-2. 30-day baseline connect rate on aggregator leads.
-3. 10DLC registration status confirmation.
-
-### 7.6 Data Maximus needs from existing systems
-- **Salesforce:** full Lead schema, `Lead_Source__c` picklist + data integrity %, 30-day connect rate on aggregator, 30-day appointment-set rate on aggregator, current FSL config.
-- **Heymarket:** 10DLC registration status, current sender numbers, API tier, webhook config.
-- **Aircall:** full disposition list, current Salesforce write-back behavior, in-flight cancellation API capability.
-
----
 
 ## 8. ASSUMPTIONS NEEDING BRETT'S CONFIRMATION
 
