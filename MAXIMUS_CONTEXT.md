@@ -1,4 +1,4 @@
-# RRS_CADENCE_CONTEXT.md
+# MAXIMUS_CONTEXT.md
 
 > **Source of Truth & State Management file for Maximus**
 > **Project:** Roof Repair Specialists — Inbound Lead Follow-Up Cadence
