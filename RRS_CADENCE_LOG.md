@@ -3,7 +3,7 @@
 > **Append-only decision log for the Roof Repair Specialists Lead Follow-Up Cadence project.**
 > Format: `[YYYY-MM-DD] — Decision — Reason — Impact`
 > Newest entries at bottom. Never edit prior entries.
-> **Last updated:** 2026-05-02
+> **Last updated:** 2026-05-03
 
 ---
 
@@ -18,3 +18,5 @@
 [2026-05-02] — Project outline for architecture spec committed as Section 7 of project file — Plan locked, WS-1 next, Session 1 gated on Salesforce baseline data pull — 6–8 session sprint to Laura handoff
 
 [2026-05-02] — Maximus rebuilt clean from 13-node spec — 27-node Copilot version was non-functional; three-file architecture (Context / Project / Log) live with debounce buffer for Telegram chunking — Executor loop verified, ready for Session 1 prep
+
+[2026-05-02] — Maximus 13-node rebuild verified end-to-end — Three-file architecture (Context / Project / Log) live, debounce buffer functional, write path proven — Ready for Session 1 (commit: pending)
