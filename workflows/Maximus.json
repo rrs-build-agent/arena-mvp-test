@@ -1,0 +1,499 @@
+{
+  "name": "Maximus",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -224,
+        72
+      ],
+      "id": "2a3c3e21-8126-4a56-8679-687bff98c3a1",
+      "name": "Telegram Trigger",
+      "webhookId": "16a0d1c0-7313-4a67-88c7-aa3aa97b4f16",
+      "credentials": {
+        "telegramApi": {
+          "id": "1IgYxbRElY2XTGre",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.combined_text }}",
+        "options": {
+          "systemMessage": "=You are Maximus, the AI Orchestrator for Brett Thompson's Arena Company / Roof Repair Specialists projects. You run inside n8n, connected to GitHub, and you maintain three markdown files as your source of truth.\n\nCONTEXT FILE:\n{{ $json.contextContent }}\n\nPROJECT FILE:\n{{ $json.projectContent }}\n\nLOG FILE:\n{{ $json.logContent }}\n\nWhen you need to update any file, emit UPDATE_FILE blocks in this exact format:\n\nUPDATE_FILE: [filename]\nSECTION: [exact section name from file]\nACTION: REPLACE or APPEND\nCONTENT:\n[full new content for the section]\nEND_UPDATE\n\nRules:\n- REPLACE means you provide the complete new content for that section\n- APPEND means you add new content to the end of that section\n- Always include the full content, never use placeholders\n- You can emit multiple UPDATE_FILE blocks in one response\n- Valid filenames: MAXIMUS_CONTEXT.md, RRS_CADENCE_PROJECT.md, RRS_CADENCE_LOG.md\n- Always log meaningful decisions to RRS_CADENCE_LOG.md via APPEND. When logging a decision that resulted from a file update in the same turn, include the commit SHA in parentheses at the end. Format:\n[YYYY-MM-DD] — Decision — Reason — Impact (commit: <short_sha>)\n\nIf you do not yet know the SHA at the time of writing the log entry (i.e., the commit happens in the same turn as the log entry), use the placeholder (commit: pending) and Brett can backfill via GitHub if needed. For decisions that do not involve a file update, omit the commit field entirely."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        1120,
+        72
+      ],
+      "id": "e4b6f36a-b9b5-4b6b-a842-b70cd532e2fb",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "claude-opus-4-7",
+          "mode": "list"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.3,
+      "position": [
+        1128,
+        296
+      ],
+      "id": "9c761471-44e6-4801-8bd7-c8d5b40dc12c",
+      "name": "Anthropic Chat Model",
+      "credentials": {
+        "anthropicApi": {
+          "id": "68g4UTzfTVGLDzIY",
+          "name": "Anthropic account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const sd = $getWorkflowStaticData('global');\nconst msg = $input.item.json.message;\nconst cid = msg.chat.id;\nconst mid = msg.message_id;\nconst now = Date.now();\n\n// Handle file uploads\nif (msg.document) {\n  const fileName = msg.document.file_name || 'unknown';\n  return [{json:{chat_id:cid, combined_text:`[File upload: ${fileName}] Please describe what you would like me to do with this file.`}}];\n}\n\nconst txt = msg.text || '';\nif (!sd.buffers) sd.buffers = {};\nif (!sd.buffers[cid]) sd.buffers[cid] = {messages:[], lastUpdate:now, processedIds:[]};\nconst b = sd.buffers[cid];\nif (b.processedIds.includes(mid)) return [];\nb.messages.push({id:mid, text:txt, ts:now});\nb.lastUpdate = now;\nawait new Promise(r => setTimeout(r, 3100));\nconst cb = sd.buffers[cid];\nif (cb.lastUpdate > now) return [];\nconst combined = cb.messages.map(m=>m.text).join('');\nconst ids = cb.messages.map(m=>m.id);\ncb.processedIds = [...cb.processedIds, ...ids].slice(-50);\ncb.messages = [];\nif (!combined || combined.trim() === '') {\n  return [{json:{chat_id:cid, combined_text:'[Empty message received]'}}];\n}\nreturn [{json:{chat_id:cid, combined_text:combined}}];"
+      },
+      "id": "61716f6f-2b00-46f4-8924-9d626f4706ed",
+      "name": "Debounce Buffer",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        0,
+        72
+      ],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "resource": "file",
+        "operation": "get",
+        "owner": {
+          "__rl": true,
+          "value": "rrs-build-agent",
+          "mode": "list"
+        },
+        "repository": {
+          "__rl": true,
+          "value": "arena-mvp-test",
+          "mode": "list"
+        },
+        "filePath": "MAXIMUS_CONTEXT.md",
+        "asBinaryProperty": false,
+        "additionalParameters": {}
+      },
+      "id": "9d44b05d-0767-4936-a791-e97510531a53",
+      "name": "GitHub Get File",
+      "type": "n8n-nodes-base.github",
+      "typeVersion": 1.1,
+      "position": [
+        224,
+        72
+      ],
+      "webhookId": "74cc5651-a5c0-4270-977d-a95c47aac85a",
+      "credentials": {
+        "githubOAuth2Api": {
+          "id": "G52whzvXmechLYtE",
+          "name": "GitHub OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "resource": "file",
+        "operation": "get",
+        "owner": {
+          "__rl": true,
+          "value": "rrs-build-agent",
+          "mode": "list"
+        },
+        "repository": {
+          "__rl": true,
+          "value": "arena-mvp-test",
+          "mode": "list"
+        },
+        "filePath": "RRS_CADENCE_PROJECT.md",
+        "asBinaryProperty": false,
+        "additionalParameters": {}
+      },
+      "id": "1cd6f8aa-589e-4df7-be37-78fd30a8b677",
+      "name": "GitHub Get File1",
+      "type": "n8n-nodes-base.github",
+      "typeVersion": 1.1,
+      "position": [
+        448,
+        72
+      ],
+      "webhookId": "afa1452b-f1ad-442c-b3b1-95c3e815aced",
+      "credentials": {
+        "githubOAuth2Api": {
+          "id": "G52whzvXmechLYtE",
+          "name": "GitHub OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "resource": "file",
+        "operation": "get",
+        "owner": {
+          "__rl": true,
+          "value": "rrs-build-agent",
+          "mode": "list"
+        },
+        "repository": {
+          "__rl": true,
+          "value": "arena-mvp-test",
+          "mode": "list"
+        },
+        "filePath": "RRS_CADENCE_LOG.md",
+        "asBinaryProperty": false,
+        "additionalParameters": {}
+      },
+      "id": "3dde8695-be28-4c88-abfb-67044d350dc6",
+      "name": "GitHub Get File2",
+      "type": "n8n-nodes-base.github",
+      "typeVersion": 1.1,
+      "position": [
+        672,
+        72
+      ],
+      "webhookId": "cd6ea601-af63-48a9-8b91-40880540f908",
+      "credentials": {
+        "githubOAuth2Api": {
+          "id": "G52whzvXmechLYtE",
+          "name": "GitHub OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const dec = b => b ? Buffer.from(b,'base64').toString('utf-8') : '';\nconst c = $('GitHub Get File').item.json;\nconst p = $('GitHub Get File1').item.json;\nconst l = $('GitHub Get File2').item.json;\nconst db = $('Debounce Buffer').item.json;\nreturn [{json:{\n  chat_id:db.chat_id, combined_text:db.combined_text,\n  contextContent:dec(c.content), contextSha:c.sha || '',\n  projectContent:dec(p.content), projectSha:p.sha || '',\n  logContent:dec(l.content), logSha:l.sha || ''\n}}];"
+      },
+      "id": "d8d9a0f0-353d-4cca-86cc-85f5f255e253",
+      "name": "Bundle Files",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        896,
+        72
+      ]
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $(\"Bundle Files\").item.json.chat_id }}",
+        "contextWindowLength": 15
+      },
+      "id": "07eafad7-f8a2-49c8-a2b6-ae32d2d74848",
+      "name": "Window Buffer Memory",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        1256,
+        296
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "1",
+              "leftValue": "={{ $json.output }}",
+              "rightValue": "UPDATE_FILE:",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "8dc185f7-aee5-467e-bd40-5c35f7b19021",
+      "name": "Check Update",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1472,
+        72
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const out = $('AI Agent').item.json.output;\nconst b = $('Bundle Files').item.json;\nconst fm = {\n  'MAXIMUS_CONTEXT.md':{content:b.contextContent, sha:b.contextSha},\n  'RRS_CADENCE_PROJECT.md':{content:b.projectContent, sha:b.projectSha},\n  'RRS_CADENCE_LOG.md':{content:b.logContent, sha:b.logSha}\n};\nconst re = /UPDATE_FILE:\\s*(.+?)\\nSECTION:\\s*(.+?)\\nACTION:\\s*(.+?)\\nCONTENT:\\s*([\\s\\S]+?)\\nEND_UPDATE/g;\nconst ups = [];\nlet m;\nwhile ((m = re.exec(out)) !== null) {\n  const fp = m[1].trim(), sec = m[2].trim(), act = m[3].trim().toUpperCase(), nc = m[4].trim();\n  if (!fm[fp]) throw new Error(`Unknown file: ${fp}`);\n  const f = fm[fp];\n  const es = sec.replace(/[.*+?^${}()|[\\]\\\\]/g,'\\\\$&');\n  const sr = new RegExp(`(##\\\\s+${es}[\\\\s\\\\S]*?)(\\\\n##\\\\s|$)`,'i');\n  const sm = f.content.match(sr);\n  if (!sm) throw new Error(`Section \"${sec}\" not found in ${fp}`);\n  let uf;\n  if (act === 'APPEND') uf = f.content.replace(sm[1], sm[1].trimEnd()+'\\n\\n'+nc+'\\n');\n  else if (act === 'REPLACE') uf = f.content.replace(sm[1], sm[1].split('\\n')[0]+'\\n\\n'+nc+'\\n');\n  else throw new Error(`Bad action: ${act}`);\n  const today = new Date().toISOString().split('T')[0];\n  uf = uf.replace(/(\\*\\*Last updated:\\*\\*)\\s*\\d{4}-\\d{2}-\\d{2}/, `$1 ${today}`);\n  ups.push({filePath:fp, section:sec, action:act, sha:f.sha, updatedContent:uf, commitMessage:`Maximus: ${act.toLowerCase()} ${sec} in ${fp}`});\n  fm[fp].content = uf;\n}\nif (!ups.length) throw new Error('No valid UPDATE_FILE blocks');\nreturn ups.map(u => ({json:{...u, chat_id:b.chat_id}}));"
+      },
+      "id": "837245f7-bcbb-4718-a066-72f9ca992148",
+      "name": "Parse Updates",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1696,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "resource": "file",
+        "operation": "edit",
+        "owner": {
+          "__rl": true,
+          "value": "rrs-build-agent",
+          "mode": "list"
+        },
+        "repository": {
+          "__rl": true,
+          "value": "arena-mvp-test",
+          "mode": "list"
+        },
+        "filePath": "={{ $json.filePath }}",
+        "fileContent": "={{ $json.updatedContent }}",
+        "commitMessage": "={{ $json.commitMessage }}"
+      },
+      "id": "cd48593f-3470-4ce1-a915-0f9fabb45173",
+      "name": "GitHub Edit File",
+      "type": "n8n-nodes-base.github",
+      "typeVersion": 1.1,
+      "position": [
+        1920,
+        0
+      ],
+      "webhookId": "5d8ccf41-e0ef-40f4-a686-b10ac493ba05",
+      "credentials": {
+        "githubOAuth2Api": {
+          "id": "G52whzvXmechLYtE",
+          "name": "GitHub OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst upd = items[0].json.commitMessage !== undefined;\nlet reply, cid;\nif (upd) {\n  reply = items.map(i => `✅ ${i.json.action==='APPEND'?'Logged to':'Updated'} ${i.json.section} in ${i.json.filePath}\\nSHA: ${i.json.commit?.sha?.substring(0,7)||'?'}`).join('\\n\\n');\n  cid = items[0].json.chat_id;\n} else {\n  reply = $('AI Agent').item.json.output;\n  cid = $('Bundle Files').item.json.chat_id;\n}\nconst MAX = 4000;\nconst chunks = [];\nlet r = reply;\nwhile (r.length > MAX) {\n  let s = r.lastIndexOf('\\n\\n', MAX);\n  if (s === -1) s = r.lastIndexOf('\\n', MAX);\n  if (s === -1) s = MAX;\n  chunks.push(r.slice(0,s));\n  r = r.slice(s).trimStart();\n}\nif (r.length) chunks.push(r);\nreturn chunks.map((t,i) => ({json:{chat_id:cid, text:chunks.length>1?`(${i+1}/${chunks.length}) ${t}`:t}}));"
+      },
+      "id": "89ce05b3-d0ad-4a2e-a2ae-60788695a71e",
+      "name": "Format Reply",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2144,
+        72
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "={{ $json.text }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "id": "c320da15-ced3-45c4-b38e-4a0de8647940",
+      "name": "Telegram Send Message",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2368,
+        72
+      ],
+      "webhookId": "9b02c15f-841b-4331-9a7e-d49d2e940dac",
+      "credentials": {
+        "telegramApi": {
+          "id": "1IgYxbRElY2XTGre",
+          "name": "Telegram account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Debounce Buffer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anthropic Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Check Update",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Debounce Buffer": {
+      "main": [
+        [
+          {
+            "node": "GitHub Get File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GitHub Get File": {
+      "main": [
+        [
+          {
+            "node": "GitHub Get File1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GitHub Get File1": {
+      "main": [
+        [
+          {
+            "node": "GitHub Get File2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GitHub Get File2": {
+      "main": [
+        [
+          {
+            "node": "Bundle Files",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Bundle Files": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Window Buffer Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Update": {
+      "main": [
+        [
+          {
+            "node": "Parse Updates",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Updates": {
+      "main": [
+        [
+          {
+            "node": "GitHub Edit File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GitHub Edit File": {
+      "main": [
+        [
+          {
+            "node": "Format Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Reply": {
+      "main": [
+        [
+          {
+            "node": "Telegram Send Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "ee4babe4-982b-4309-91fe-778a08586929",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "7409c8983c1c73c32e5d5b6ce5a92c10f20c8d586539a6bb609e93815c77b8ad"
+  },
+  "id": "FPLjCgFhGQxv8S8O",
+  "tags": []
+}
