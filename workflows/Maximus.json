@@ -67,7 +67,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const sd = $getWorkflowStaticData('global');\nconst msg = $input.item.json.message;\nconst cid = msg.chat.id;\nconst mid = msg.message_id;\nconst now = Date.now();\n\n// Handle file uploads\nif (msg.document) {\n  const fileName = msg.document.file_name || 'unknown';\n  return [{json:{chat_id:cid, combined_text:`[File upload: ${fileName}] Please describe what you would like me to do with this file.`}}];\n}\n\nconst txt = msg.text || '';\nif (!sd.buffers) sd.buffers = {};\nif (!sd.buffers[cid]) sd.buffers[cid] = {messages:[], lastUpdate:now, processedIds:[]};\nconst b = sd.buffers[cid];\nif (b.processedIds.includes(mid)) return [];\nb.messages.push({id:mid, text:txt, ts:now});\nb.lastUpdate = now;\nawait new Promise(r => setTimeout(r, 3100));\nconst cb = sd.buffers[cid];\nif (cb.lastUpdate > now) return [];\nconst combined = cb.messages.map(m=>m.text).join('');\nconst ids = cb.messages.map(m=>m.id);\ncb.processedIds = [...cb.processedIds, ...ids].slice(-50);\ncb.messages = [];\nif (!combined || combined.trim() === '') {\n  return [{json:{chat_id:cid, combined_text:'[Empty message received]'}}];\n}\nreturn [{json:{chat_id:cid, combined_text:combined}}];"
+        "jsCode": "const sd = $getWorkflowStaticData('global');\nconst msg = $input.item.json.message;\nconst cid = msg.chat.id;\nconst mid = msg.message_id;\nconst now = Date.now();\n\nconst txt = msg.text || '';\nif (!sd.buffers) sd.buffers = {};\nif (!sd.buffers[cid]) sd.buffers[cid] = {messages:[], lastUpdate:now, processedIds:[]};\nconst b = sd.buffers[cid];\nif (b.processedIds.includes(mid)) return [];\nb.messages.push({id:mid, text:txt, ts:now});\nb.lastUpdate = now;\nawait new Promise(r => setTimeout(r, 3100));\nconst cb = sd.buffers[cid];\nif (cb.lastUpdate > now) return [];\nconst combined = cb.messages.map(m=>m.text).join('');\nconst ids = cb.messages.map(m=>m.id);\ncb.processedIds = [...cb.processedIds, ...ids].slice(-50);\ncb.messages = [];\nif (!combined || combined.trim() === '') return [];\nreturn [{json:{chat_id:cid, combined_text:combined}}];"
       },
       "id": "61716f6f-2b00-46f4-8924-9d626f4706ed",
       "name": "Debounce Buffer",
@@ -329,11 +329,144 @@
           "name": "Telegram account"
         }
       }
+    },
+    {
+      "parameters": {
+        "jsCode": "const msg = $input.item.json.message;\nconst chatId = msg.chat.id;\nconst messageId = msg.message_id;\n\nif (msg.text) {\n  return [{ json: { message: { chat: { id: chatId }, message_id: messageId, text: msg.text }, pendingFileId: '' } }];\n}\n\nif (msg.document) {\n  const fileName = msg.document.file_name || '';\n  const mimeType = msg.document.mime_type || '';\n  const fileId = msg.document.file_id;\n  const allowed = ['text/plain', 'text/markdown'];\n  const allowedExt = ['.txt', '.md'];\n  const isAllowed = allowed.includes(mimeType) || allowedExt.some(ext => fileName.toLowerCase().endsWith(ext));\n\n  if (!isAllowed) {\n    return [{ json: { message: { chat: { id: chatId }, message_id: messageId, text: '[FILE REJECTED: ' + fileName + ' — only .txt and .md supported]' }, pendingFileId: '' } }];\n  }\n\n  return [{ json: { message: { chat: { id: chatId }, message_id: messageId, text: '' }, pendingFileId: fileId, pendingFileName: fileName } }];\n}\n\nreturn [{ json: { message: { chat: { id: chatId }, message_id: messageId, text: '[UNSUPPORTED MESSAGE TYPE]' }, pendingFileId: '' } }];"
+      },
+      "id": "a1f2c3d4-e5f6-4a8b-9c0d-1e2f3a4b5c6d",
+      "name": "Resolve Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -100,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "1",
+              "leftValue": "={{ $json.pendingFileId }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "b2f3c4d5-e6f7-4a9b-8c1d-2e3f4a5b6c7d",
+      "name": "File Path Branch",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        80,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "file",
+        "operation": "get",
+        "fileId": "={{ $json.pendingFileId }}"
+      },
+      "id": "c3f4d5e6-f7a8-4b0c-9d2e-3f4a5b6c7d8e",
+      "name": "Download File",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        260,
+        360
+      ],
+      "webhookId": "d4e5f6a7-b8c9-4d1e-8f3a-4b5c6d7e8f9a",
+      "credentials": {
+        "telegramApi": {
+          "id": "1IgYxbRElY2XTGre",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const binaryData = $input.item.binary.data;\nconst fileText = Buffer.from(binaryData.data, 'base64').toString('utf-8');\nconst fileName = $('Resolve Input').item.json.pendingFileName;\nconst chatId = $('Resolve Input').item.json.message.chat.id;\nconst messageId = $('Resolve Input').item.json.message.message_id;\n\nif (fileText.length > 100000) {\n  return [{ json: { message: { chat: { id: chatId }, message_id: messageId, text: '[FILE TOO LARGE: ' + fileName + ' is ' + fileText.length + ' chars, limit 100000]' } } }];\n}\n\nreturn [{ json: { message: { chat: { id: chatId }, message_id: messageId, text: '[FILE: ' + fileName + ']\\n\\n' + fileText } } }];"
+      },
+      "id": "e5f6a7b8-c9d0-4e2f-8a4b-5c6d7e8f9a0b",
+      "name": "Read File Contents",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        360
+      ]
     }
   ],
   "pinData": {},
   "connections": {
     "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Resolve Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resolve Input": {
+      "main": [
+        [
+          {
+            "node": "File Path Branch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "File Path Branch": {
+      "main": [
+        [
+          {
+            "node": "Download File",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Debounce Buffer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download File": {
+      "main": [
+        [
+          {
+            "node": "Read File Contents",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read File Contents": {
       "main": [
         [
           {
